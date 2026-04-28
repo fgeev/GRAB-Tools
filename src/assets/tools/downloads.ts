@@ -38,8 +38,8 @@ async function can_download_level(level_id: string) {
 
 	// then check server
 	const can_download = await can_download_level_request(level_id);
-	if (can_download) return true;
-	if (can_download === false) {
+	if (can_download) return false;
+	if (can_download === true) {
 		window.toast('Not permitted to download this level', 'warning');
 		return false;
 	}
