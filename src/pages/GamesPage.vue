@@ -25,7 +25,7 @@ export default {
 						<p>GRAB!</p>
 						<div class="game-links">
 							<a
-								href="https://www.meta.com/en-gb/experiences/4104088956355944/"
+								href="https://grabvr.quest/levels/viewer/?level=2c7xy5tx5c6pb00mw3lru:1777213119"
 								class="button-sml"
 								>Oculus</a
 							>
