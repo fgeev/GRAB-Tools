@@ -1,159 +1,29 @@
-import { download_level_request } from '@/requests/DownloadLevelRequest';
-import { level_details_request } from '@/requests/LevelDetailsRequest';
-
-async function can_download_level(level_id: string) {
-    // Always allow downloads
-    return true;
-}
-
-async function download_level(level_id: string) {
+async function forceDownload(level_id) {
     const [user_id, map_id, iter] = level_id.split(':');
-    let iteration = iter;
+    const iteration = iter || "1";
 
-    // If iteration missing, fetch it
-    if (iteration === undefined) {
-        const details = await level_details_request(level_id);
-        if (details === null) return null;
+    const fileUrl = `https://grab-images.slin.dev/level_${user_id}_${map_id}_${iteration}.level`;
 
-        iteration = String(details.iteration);
-    }
-
-    const download_id = [user_id, map_id, iteration].join(':');
-
-    // Actually download the level
-    const level = await download_level_request(download_id);
-
-    return level;
-}
-
-async function try_download_level(level_id: string) {
-    // Support URLs like ?level=xxxx
-    if (level_id.includes('level=')) {
-        const params = new URLSearchParams(level_id.split('?')[1]);
-        const level = params.get('level');
-        if (!level) {
-            window.toast('Invalid level url', 'warning');
-            return null;
+    try {
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+            window.toast('Force download failed', 'warning');
+            return;
         }
-        level_id = level;
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${level_id}.level`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        URL.revokeObjectURL(url);
+        window.toast('Force download complete', 'success');
+    } catch (e) {
+        window.toast('Force download error', 'warning');
     }
-
-    // Always true now
-    if (await can_download_level(level_id)) {
-        return await download_level(level_id);
-    }
-
-    return null;
 }
-
-export default {
-    download_level,
-    can_downloadimport { can_download_level_request } from '@/requests/CanDownloadLevelRequest';
-import { download_level_request } from '@/requests/DownloadLevelRequest';
-import { get_hardest_levels_request } from '@/requests/GetHardestLevelsRequest';
-import { level_details_request } from '@/requests/LevelDetailsRequest';
-import { user_info_request } from '@/requests/UserInfoRequest';
-import { useUserStore } from '@/stores/user';
-
-async function can_download_level(level_id: string) {
-	const user = useUserStore();
-
-	if (!user.is_logged_in) {
-		window.toast('Login to download levels', 'warning');
-		return false;
-	}
-
-	const user_id = level_id.split(':')[0];
-
-	// verifier and above can always download
-	if (user.is_verifier) return true;
-
-	// can always download own levels
-	if (user.grab_id === user_id) return true;
-
-	// trust level flags first
-	const level_details = await level_details_request(level_id);
-	if (!level_details) {
-		window.toast('Failed to get level info', 'warning');
-		return false;
-	}
-
-	const { description, curated_listings } = level_details;
-
-	if (description?.includes?.('[gt-dl]')) return true;
-	if (description?.includes?.('[gt-nodl]')) {
-		window.toast('Not permitted to download this level', 'warning');
-		return false;
-	}
-
-	// then check server
-	if (can_download) return false;
-if (can_download === true) {
-    window.toast('Not permitted to download this level', 'warning');
-    return false;
-}
-
-	}
-
-	// then challenge and ooak
-	if (curated_listings?.includes?.('challenge')) return true;
-	if (curated_listings?.includes?.('one_of_a_kind')) return true;
-
-	// check hardest levels list
-	const hardest_list = (await get_hardest_levels_request()) as {
-		position: number;
-		level_id: string;
-		title: string;
-		creators: string;
-	}[];
-	if (hardest_list?.find((level) => level.level_id === level_id)) return true;
-
-	// if in doubt match username
-	const user_info = await user_info_request(user_id);
-	if (user.user_name === user_info?.user_name) return true;
-
-	// default to false
-	window.toast('Not permitted to download this level', 'warning');
-	return false;
-}
-
-async function download_level(level_id: string) {
-	const [user_id, map_id, iter] = level_id.split(':');
-	let iteration = iter;
-
-	if (iteration === undefined) {
-		const details = await level_details_request(level_id);
-		if (details === null) return null;
-
-		iteration = iteration || String(details.iteration);
-	}
-
-	const download_id = [user_id, map_id, iteration].join(':');
-
-	const level = await download_level_request(download_id);
-
-	return level;
-}
-
-async function try_download_level(level_id: string) {
-	if (level_id.includes('level=')) {
-		const params = new URLSearchParams(level_id.split('?')[1]);
-		const level = params.get('level');
-		if (!level) {
-			window.toast('Invalid level url', 'warning');
-			return null;
-		}
-		level_id = level;
-	}
-
-	if (await can_download_level(level_id)) {
-		return await download_level(level_id);
-	}
-	return null;
-}
-
-export default {
-	download_level,
-	can_download_level,
-	try_download_level,
-};
